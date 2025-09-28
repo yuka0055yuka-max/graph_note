@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>多機能日記グラフアプリ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f4f7f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button, select {
+      padding: 10px 15px;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #ecf0f1;
+    }
+    input[type="text"], input[type="number"] {
+      width: 95%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 15px;
+    }
+    .delete-btn {
+      background-color: #e74c3c;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+      font-size: 18px;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+    }
+    #extra-section {
+      margin-top: 40px;
+    }
+    #pinCode {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+      width: 200px;
+    }
+    #linkResult, #speechResult {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+    }
+    #drawCanvas {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      touch-action: none;
+      width: 100%;
+      max-width: 300px;
+      height: 200px;
+    }
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      button, select, #pinCode {
+        width: 100%;
+      }
+      #drawCanvas {
+        max-width: 100%;
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>多機能日記グラフアプリ</h1>
+
+    <section id="diary-section">
+      <h2>日記・メモ</h2>
+      <textarea id="diary-text" rows="8" placeholder="ここに日記やプレゼンの内容を書き込もう..."></textarea>
+    </section>
+
+    <section id="graph-section">
+      <h2>データとグラフ</h2>
+      <div class="controls">
+        <button onclick="addRow()">行を追加</button>
+        <select id="chartTypeSelector" onchange="changeChartType()">
+          <option value="bar">棒グラフ</option>
+          <option value="line">折れ線グラフ</option>
+          <option value="pie">円グラフ</option>
+          <option value="radar">レーダーチャート</option>
+        </select>
+        <button onclick="exportToExcel()">Excelエクスポート</button>
+        <button onclick="exportToPDF()">PDFエクスポート</button>
+      </div>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>項目 (ラベル)</th>
+            <th>値</th>
+            <th>削除</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" value="勉強時間" oninput="renderChart()"></td>
+            <td><input type="number" value="3" oninput="renderChart()"></td>
+            <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+          </tr>
+          <tr>
+            <td><input type="text" value="睡眠時間" oninput="renderChart()"></td>
+            <td><input type="number" value="8" oninput="renderChart()"></td>
+            <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="chart-container">
+        <canvas id="myChart"></canvas>
+      </div>
+    </section>
+
+    <section id="extra-section">
+      <h2>追加機能</h2>
+      <div class="controls">
+        <input type="text" id="pinCode" placeholder="PINコードを入力">
+        <button onclick="generateShareLink()">共有リンク生成</button>
+        <p id="linkResult"></p>
+      </div>
+      <div class="controls">
+        <button onclick="startSpeech()">🎤 音声入力</button>
+        <p id="speechResult"></p>
+      </div>
+      <div class="controls">
+        <canvas id="drawCanvas"></canvas>
+        <button onclick="clearCanvas()">手書き消去</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let myChart;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderChart();
+      setupCanvas();
+    });
+
+    function renderChart() {
+      const table = document.getElementById('dataTable');
+      const labels = [];
+      const data = [];
+
+      for (let i = 1; i < table.rows.length; i++) {
+        const labelInput = table.rows[i].cells[0].querySelector('input');
+        const dataInput = table.rows[i].cells[1].querySelector('input');
+        if (labelInput && dataInput) {
+          labels.push(labelInput.value);
+          data.push(parseFloat(dataInput.value) || 0);
+        }
+      }
+
+      const ctx = document.getElementById('myChart').getContext('2d');
+      const chartType = document.getElementById('chartTypeSelector').value;
+
+      if (myChart) myChart.destroy();
+
+      myChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: labels,
+          datasets:  [A](https://github.com/Kamekure-Maisuke/lerlin/tree/91952c2c558dd3fad0f3d90fd34ba3cbe465be09/chap4%2Fdoc%2F2.md?copilot_analytics_metadata=eyJldmVudEluZm9fY2xpY2tTb3VyY2UiOiJjaXRhdGlvbkxpbmsiLCJldmVudEluZm9fY2xpY2tEZXN0aW5hdGlvbiI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9LYW1la3VyZS1NYWlzdWtlXC9sZXJsaW5cL3RyZWVcLzkxOTUyYzJjNTU4ZGQzZmFkMGYzZDkwZmQzNGJhM2NiZTQ2NWJlMDlcL2NoYXA0JTJGZG9jJTJGMi5tZCIsImV2ZW50SW5mb19tZXNzYWdlSWQiOiJOWnJUTWdZWFNQNmpjZUtnek0yVkciLCJldmVudEluZm9fY29udmVyc2F0aW9uSWQiOiJXNFBCTjRTR1c4VjJ2VTJlY1pyTWEifQ%3D%3D&citationMarker=9F742443-6C92-4C44-BF58-8F5A7C53B6F1) [B](https://github.com/sadnessOjisan/blog.ojisan.io/tree/93c25140a45147583a0224fe49ad0878bd4fc197/src%2Fcontents%2F20201214-my-covid%2Findex.md?copilot_analytics_metadata=eyJldmVudEluZm9fY2xpY2tTb3VyY2UiOiJjaXRhdGlvbkxpbmsiLCJldmVudEluZm9fY29udmVyc2F0aW9uSWQiOiJXNFBCTjRTR1c4VjJ2VTJlY1pyTWEiLCJldmVudEluZm9fY2xpY2tEZXN0aW5hdGlvbiI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9zYWRuZXNzT2ppc2FuXC9ibG9nLm9qaXNhbi5pb1wvdHJlZVwvOTNjMjUxNDBhNDUxNDc1ODNhMDIyNGZlNDlhZDA4NzhiZDRmYzE5N1wvc3JjJTJGY29udGVudHMlMkYyMDIwMTIxNC1teS1jb3ZpZCUyRmluZGV4Lm1kIiwiZXZlbnRJbmZvX21lc3NhZ2VJZCI6Ik5aclRNZ1lYU1A2amNlS2d6TTJWRyJ9&citationMarker=9F742443-6C92-4C44-BF58-8F5A7C53B6F1)[{
+            label: 'データ',
+            data: data,
+            background

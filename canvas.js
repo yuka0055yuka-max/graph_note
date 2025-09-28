@@ -55,6 +55,3 @@ function setupCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   });
 }
-
-// ページ読み込み時に自動実行
-window.addEventListener("load", setupCanvas);

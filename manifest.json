@@ -1,13 +1,11 @@
 {
-  "name": "Graph Note",
+  "name": "Graph Note 完全版",
   "short_name": "GraphNote",
-  "description": "感情・記録・グラフをつなぐ交換日記PWA",
   "start_url": "./",
-  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#4d88ff",
+  "theme_color": "#3498db",
+  "description": "日記・グラフ・手書き・音声・履歴・共有が全部できる記録アプリ",
   "icons": [
     {
       "src": "icon-192.png",
